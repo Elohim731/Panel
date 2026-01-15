@@ -1,0 +1,248 @@
+<head>
+  <style>
+    /* --- Main Styles --- */
+    :root {
+      --bg-color: #1a1f2c;
+      --panel-bg-color: rgba(30, 35, 50, 0.9);
+      --sidebar-bg-color: rgba(20, 25, 40, 0.9);
+      --header-bg-color: #2a3145;
+      --text-color: #d0d8e8;
+      --primary-color: #00aaff;
+      --border-color: #3a4158;
+      --hover-color: #3d455d;
+      --active-color: #00aaff;
+      --hp-color: #e74c3c;
+      --mp-color: #3498db;
+      --exp-color: #f1c40f;
+      --progress-bg-color: #555;
+    }
+
+    body, .card-body {
+      background-color: transparent;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+    
+    /* --- Trigger Button --- */
+    #open-status-modal-btn {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      z-index: 999;
+      background-color: var(--header-bg-color);
+      color: var(--primary-color);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    #open-status-modal-btn:hover {
+      background-color: var(--hover-color);
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+
+    /* --- Modal Structure --- */
+    #status-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(5px);
+    }
+    #status-modal.modal-hidden { display: none; }
+    
+    .modal-container {
+      width: 80%;
+      max-width: 1200px;
+      height: 85%;
+      background-color: var(--panel-bg-color);
+      border: 2px solid var(--primary-color);
+      border-radius: 10px;
+      box-shadow: 0 0 25px rgba(0, 170, 255, 0.5);
+      display: flex;
+      overflow: hidden;
+    }
+    
+    #close-modal-btn {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        color: #fff;
+        font-size: 30px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    #close-modal-btn:hover { color: var(--primary-color); }
+
+    /* --- Sidebar Navigation --- */
+    .modal-sidebar {
+      width: 200px;
+      background-color: var(--sidebar-bg-color);
+      padding: 20px 0;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border-color);
+    }
+    .sidebar-btn {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      background: none;
+      border: none;
+      border-left: 4px solid transparent;
+      color: var(--text-color);
+      text-align: left;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .sidebar-btn:hover {
+      background-color: var(--hover-color);
+    }
+    .sidebar-btn.active {
+      background-color: var(--header-bg-color);
+      border-left-color: var(--active-color);
+      color: var(--active-color);
+      font-weight: bold;
+    }
+
+    /* --- Main Content Area --- */
+    .modal-main-content {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .content-pane { display: none; }
+    .content-pane.visible { display: block; }
+    
+    .content-pane h2 {
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 10px;
+        margin-top: 0;
+    }
+
+    .property {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 15px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .property:last-child { border-bottom: none; }
+    .property-name { font-weight: bold; text-align: right; color: #a0a8c0; }
+    .property-value { word-break: break-all; }
+    .long-text { white-space: pre-wrap; }
+
+    /* Progress Bar Styles */
+    .progress-bar { background-color: #333; border-radius: 5px; overflow: hidden; width: 100%; height: 20px; position: relative; }
+    .progress-bar-inner { height: 100%; transition: width 0.3s ease; }
+    .hp-bar .progress-bar-inner { background: linear-gradient(to right, #c0392b, #e74c3c); }
+    .mp-bar .progress-bar-inner { background: linear-gradient(to right, #2980b9, #3498db); }
+    .exp-bar .progress-bar-inner { background: linear-gradient(to right, #f39c12, #f1c40f); }
+    .progress-bar-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; color: white; text-shadow: 1px 1px 1px black; white-space: nowrap; }
+
+  </style>
+  <script type="module">
+    $(() => {
+      // --- UI Element References ---
+      const $modal = $('#status-modal');
+      const $openBtn = $('#open-status-modal-btn');
+      const $closeBtn = $('#close-modal-btn');
+      const $sidebarButtons = $('.sidebar-btn');
+      const $contentPanes = $('.content-pane');
+
+      // --- Modal Control ---
+      $openBtn.on('click', () => $modal.removeClass('modal-hidden'));
+      $closeBtn.on('click', () => $modal.addClass('modal-hidden'));
+      $modal.on('click', function(e) {
+        if ($(e.target).is($modal)) {
+          $modal.addClass('modal-hidden');
+        }
+      });
+      
+      // --- Tab Navigation ---
+      $sidebarButtons.on('click', function() {
+        const targetId = $(this).data('target');
+        
+        $sidebarButtons.removeClass('active');
+        $(this).addClass('active');
+        
+        $contentPanes.removeClass('visible');
+        $(targetId).addClass('visible');
+      });
+
+      // --- Initial State Setup ---
+      // 1. Determine which world-specific tab to show
+      const currentWorld = $('#system-world-value').text().trim();
+      if (currentWorld === '现实世界') {
+        $('#nav-game-world').hide();
+      } else if (currentWorld === '天衍幻世录') {
+        $('#nav-real-world').hide();
+      } else {
+        // Fallback if no world is set, hide both
+         $('#nav-game-world').hide();
+         $('#nav-real-world').hide();
+      }
+
+      // 2. Render Progress Bars in the game panel
+      function renderProgressBar(selector) {
+        const $bar = $(selector);
+        if ($bar.length === 0) return;
+        const textValue = $bar.find('.progress-bar-text').text();
+        if (!textValue || !textValue.includes('/')) return;
+        const [current, max] = textValue.split('/').map(Number);
+        if (isNaN(current) || isNaN(max) || max === 0) return;
+        const percentage = Math.min((current / max) * 100, 100);
+        $bar.find('.progress-bar-inner').css('width', `${percentage}%`);
+      }
+      renderProgressBar('#game-hp-bar');
+      renderProgressBar('#game-mp-bar');
+      renderProgressBar('#game-exp-bar');
+      
+      // 3. Activate the first visible tab by default
+      $('.sidebar-btn:visible').first().trigger('click');
+    });
+  </script>
+</head>
+<body>
+  <!-- This hidden div is just to read the current world variable -->
+  <div id="system-world-value" style="display:none;">{{format_message_variable::stat_data.系统.当前世界.世界}}</div>
+
+  <!-- The Trigger Button -->
+  <button id="open-status-modal-btn">打开状态面板</button>
+
+  <!-- The Modal Window (hidden by default) -->
+  <div id="status-modal" class="modal-hidden">
+    <div class="modal-container">
+      <span id="close-modal-btn">&times;</span>
+      
+      <!-- Sidebar -->
+      <div class="modal-sidebar">
+        <button class="sidebar-btn" data-target="#content-system" id="nav-system">系统信息</button>
+        <button class="sidebar-btn" data-target="#content-real-world" id="nav-real-world">现实世界</button>
+        <button class="sidebar-btn" data-target="#content-game-world" id="nav-game-world">天衍幻世录</button>
+      </div>
+      
+      <!-- Main Content -->
+      <div class="modal-main-content">
+        <!-- System Pane -->
+        <div id="content-system" class="content-pane">
+          <h2>系统信息</h2>
+          <div class="property"><div class="property-name">当前世界</div><div class="property-value">{{format_message_variable::stat_data.系统.当前世界.世界}}</div></div>
+          <div class="property"><div class="property-name">详细地点</div><div class="property-value">{{format_message_variable::stat_data.系统.当前世界.详细地点}}</div></div>
+        </div>
+        
+        <!-- Real World Pane -->
+        <div id="content-real-world" class="content-pane">
+          <h2>现实世界状态栏</h2>
+          <div class="property"><div class="property-name">时间</div><div class="property-value">{{format_message_variable::stat_data.现实世界状态栏.时间.纪元}} {{format_message_vari
